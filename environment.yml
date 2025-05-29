@@ -1,0 +1,14 @@
+name: bitrack
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+    - numpy
+    - matplotlib
+    - plotly
+    - torch
+    - rtree
+    - shapely
+    - ortools
+    - scipy
+    - filterpy

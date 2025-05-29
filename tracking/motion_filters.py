@@ -5,58 +5,60 @@ from utils import angle_in_range
 
 
 class CVKalmanFilter:
-    def __init__(self, box, p=10, q=2, r=1, ang_vel=True, vel_reinit=True):
-        """Constant volocity (CV)-based Kalman filter.
+    def __init__(self, box, p=10, q=2, r=1, ang_vel=True, vel_reinit=True, T=1):
+        """Constant velocity (CV)-based Kalman filter.
         Args:
             box (np.ndarray): [x, y, z, dx, dy, dz, heading]
         """
         assert len(box) == 7
         box[6] = angle_in_range(box[6])
-
+        self.T = T
         self.ang_vel = ang_vel
+
         if ang_vel:
             # dim_x: [x, y, z, dx, dy, dz, heading, vx, vy, vz, vr]
             self.kf = KalmanFilter(dim_x=11, dim_z=7)
             self.kf.F = np.array(
-                [  # state transition matrix
-                    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                    [0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [
+                    [1, 0, 0, 0, 0, 0, 0, T, 0, 0, 0],  # x' = x + T * vx
+                    [0, 1, 0, 0, 0, 0, 0, 0, T, 0, 0],  # y' = y + T * vy
+                    [0, 0, 1, 0, 0, 0, 0, 0, 0, T, 0],  # z' = z + T * vz
+                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],  # dx' = dx
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],  # dy' = dy
+                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # dz' = dz
+                    # heading' = heading + T * vr
+                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, T],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],  # vx' = vx
+                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],  # vy' = vy
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],  # vz' = vz
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # vr' = vr
                 ]
             )
-
         else:
             # dim_x: [x, y, z, dx, dy, dz, heading, vx, vy, vz]
             self.kf = KalmanFilter(dim_x=10, dim_z=7)
             self.kf.F = np.array(
-                [  # state transition matrix
-                    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-                    [0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
-                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [
+                    [1, 0, 0, 0, 0, 0, 0, T, 0, 0],  # x' = x + T * vx
+                    [0, 1, 0, 0, 0, 0, 0, 0, T, 0],  # y' = y + T * vy
+                    [0, 0, 1, 0, 0, 0, 0, 0, 0, T],  # z' = z + T * vz
+                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],  # dx' = dx
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # dy' = dy
+                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],  # dz' = dz
+                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],  # heading' = heading
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],  # vx' = vx
+                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],  # vy' = vy
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  # vz' = vz
                 ]
             )
 
-        self.kf.x[:7] = box[:, np.newaxis]
-        self.kf.H[:, :7] = np.eye(7)
+        # Initialize state uncertainty (P), process noise (Q), and measurement noise (R)
+        self.kf.P = np.eye(self.kf.dim_x) * p  # State uncertainty matrix
+        self.kf.Q = np.eye(self.kf.dim_x) * q  # Process noise matrix
+        self.kf.R = np.eye(self.kf.dim_z) * r  # Measurement noise matrix
 
-        self.kf.P *= p  # initial state uncertainty
-        self.kf.Q *= q  # process uncertainty
-        self.kf.R *= r  # measurement uncertainty
+        self.kf.x[:7] = box[:, np.newaxis]  # Initial state
+        self.kf.H[:, :7] = np.eye(7)  # Measurement matrix
 
         self.vel_initialized = False
         self.vel_reinit = vel_reinit
@@ -85,7 +87,7 @@ class CVKalmanFilter:
             self.kf.x[:7, 0] = box
             self.vel_initialized = True
 
-        self.kf.update(box)
+        self.kf.update(z=box, R=self.kf.R, H=self.kf.H)
         self.kf.x[6] = angle_in_range(self.kf.x[6])
 
     def predict(self, t=1) -> np.array:

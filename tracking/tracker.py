@@ -5,7 +5,7 @@ import torch
 from rtree import index
 from shapely.geometry import Polygon
 
-from detection.voxel_rcnn.iou3d_nms.iou3d_nms_utils import boxes_iou3d_gpu
+# from detection.voxel_rcnn.iou3d_nms.iou3d_nms_utils import boxes_iou3d_gpu
 from utils import angle_in_range, boxes_to_corners_3d, boxes_to_corners_bev
 
 from .association import Matcher
@@ -13,11 +13,11 @@ from .detections import Detections
 from .track import Track
 
 
-def compute_3d_iou_matrix(bboxes1: np.ndarray, bboxes2: np.ndarray):
-    a = torch.from_numpy(bboxes1).float().to("cuda:0")
-    b = torch.from_numpy(bboxes2).float().to("cuda:0")
-    iou = boxes_iou3d_gpu(a, b).cpu().numpy()
-    return iou
+# def compute_3d_iou_matrix(bboxes1: np.ndarray, bboxes2: np.ndarray):
+#     a = torch.from_numpy(bboxes1).float().to("cuda:0")
+#     b = torch.from_numpy(bboxes2).float().to("cuda:0")
+#     iou = boxes_iou3d_gpu(a, b).cpu().numpy()
+#     return iou
 
 
 def compute_3d_iou_matrix_shapely(boxes_a, boxes_b):
@@ -63,7 +63,8 @@ def compute_3d_iou_matrix_shapely(boxes_a, boxes_b):
                 vol_a = boxes_a[i, 3] * boxes_a[i, 4] * boxes_a[i, 5]
                 vol_b = boxes_b[j, 3] * boxes_b[j, 4] * boxes_b[j, 5]
 
-                iou[i, j] = intersection_3d / max(vol_a + vol_b - intersection_3d, 1e-6)
+                iou[i, j] = intersection_3d / \
+                    max(vol_a + vol_b - intersection_3d, 1e-6)
 
     return iou
 
@@ -132,9 +133,11 @@ class Tracker:
         app_m=0.9,
         p=10,
         q=2,
+        r=1,
         ang_vel=True,
         vel_reinit=True,
         sim_metric="NCD",
+        T=1,
     ):
         self.t_miss = t_miss
         self.t_miss_new = t_miss_new
@@ -151,9 +154,11 @@ class Tracker:
         self.offline = offline
         self.p = p
         self.q = q
+        self.r = r
         self.ang_vel = ang_vel
         self.vel_reinit = vel_reinit
         self.sim_metric = sim_metric
+        self.T = T
 
     def reset(self):
         self.tracks = []
@@ -205,7 +210,7 @@ class Tracker:
         trk_valid_mask=None,
     ):
         if self.sim_metric == "IoU":
-            aff_matrix = compute_3d_iou_matrix(det_boxes, pred_boxes)
+            aff_matrix = compute_3d_iou_matrix_shapely(det_boxes, pred_boxes)
         elif self.sim_metric == "CD":
             aff_matrix = -compute_center_dis_matrix(det_boxes, pred_boxes)
         elif self.sim_metric == "NCD":
@@ -225,7 +230,8 @@ class Tracker:
             app_matrix = None
         else:
             trk_embeds = np.stack([trk.embed for trk in self.tracks])
-            app_matrix = compute_app_matrix(det_embeds, trk_embeds, is_normalized=True)
+            app_matrix = compute_app_matrix(
+                det_embeds, trk_embeds, is_normalized=True)
             post_valid_mask &= app_matrix >= self.app_thresh
 
         if det_valid_mask is None or trk_valid_mask is None:
@@ -303,7 +309,8 @@ class Tracker:
             if objs is not None:
                 assert num_dets == len(objs)
                 det_scores = np.array([meta.tracking_score for meta in objs])
-                trk_scores = np.array([trk.obj.tracking_score for trk in self.tracks])
+                trk_scores = np.array(
+                    [trk.obj.tracking_score for trk in self.tracks])
             else:
                 det_scores = None
                 trk_scores = None
@@ -404,8 +411,10 @@ class Tracker:
                     momentum=self.app_m,
                     p=self.p,
                     q=self.q,
+                    r=self.r,
                     ang_vel=self.ang_vel,
                     vel_reinit=self.vel_reinit,
+                    T=self.T,  # T is used for velocity initialization
                 )
             )  # hits == misses = 0
 

@@ -15,13 +15,15 @@ class Track:
         momentum=0.9,
         p=10,
         q=2,
+        r=1,
         ang_vel=True,
         vel_reinit=True,
+        T=1,
     ):
         self.id = Track.global_cur_id
         Track.global_cur_id += 1
         self.filter = CVKalmanFilter(
-            box, p=p, q=q, ang_vel=ang_vel, vel_reinit=vel_reinit
+            box, p=p, q=q, r=r, ang_vel=ang_vel, vel_reinit=vel_reinit, T=T
         )
         self.embed = embed
         self.misses = 0
@@ -43,7 +45,8 @@ class Track:
             self.objs.append(obj)
 
         if embed is not None:
-            self.embed = self.momentum * self.embed + (1 - self.momentum) * embed
+            self.embed = self.momentum * self.embed + \
+                (1 - self.momentum) * embed
             self.embed /= np.linalg.norm(self.embed)
 
     def predict(self, t=1):

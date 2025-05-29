@@ -6,8 +6,8 @@ from utils import KittiTrack3d, visualize_trajectories
 
 
 def get_overlaps_of_trajectories(
-    a_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d]]],
-    b_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d]]],
+    a_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d], List[np.ndarray]]],
+    b_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d], List[np.ndarray]]],
 ) -> Tuple[List[int], List[int], List[List[Tuple[int, int]]]]:
     """
     Computes overlaps between two sets of trajectories based on frame IDs and object locations.
@@ -50,7 +50,7 @@ def get_overlaps_of_trajectories(
     a_ids = list(a_trajectories.keys())
     b_ids = list(b_trajectories.keys())
     for i, a_id in enumerate(a_ids):
-        _, a_objs = a_trajectories[a_id]
+        _, a_objs, _ = a_trajectories[a_id]
         a_frames = [a_obj.sample_id for a_obj in a_objs]
         # check frames are sorted
         assert all(
@@ -58,7 +58,7 @@ def get_overlaps_of_trajectories(
         ), str(a_frames)
 
         for j, b_id in enumerate(b_ids):
-            _, b_objs = b_trajectories[b_id]
+            _, b_objs, _ = b_trajectories[b_id]
             b_frames = [b_obj.sample_id for b_obj in b_objs]
             # check frames are sorted
             assert all(
@@ -252,8 +252,8 @@ def use_forward_common_trajectories(
 
 
 def merge_forward_backward_trajectories(
-    a_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d]]],
-    b_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d]]],
+    a_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d], List[np.ndarray]]],
+    b_trajectories: Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d], List[np.ndarray]]],
     visualize_contradictions=False,
     merge_common_only=True,
 ) -> Dict[int, Tuple[List[np.ndarray], List[KittiTrack3d]]]:
@@ -318,7 +318,7 @@ def merge_forward_backward_trajectories(
         cluster_a_common_inds = {x: [] for x in cluster_a_inds}
         cluster_b_common_inds = {x: [] for x in cluster_b_inds}
         for a_idx in cluster_a_inds:
-            a_boxes, a_objs = a_trajectories[a_ids[a_idx]]
+            a_boxes, a_objs, _ = a_trajectories[a_ids[a_idx]]
             for b_idx in cluster_b_inds:
                 for a_common_idx, b_common_idx in overlap_pair_inds[a_idx][b_idx]:
                     cluster_common_objs.append(a_objs[a_common_idx])
@@ -350,7 +350,7 @@ def merge_forward_backward_trajectories(
 
             # Process distinct indices for trajectories in cluster_a
             for a_idx in cluster_a_inds:
-                a_boxes, a_objs = a_trajectories[a_ids[a_idx]]
+                a_boxes, a_objs, _ = a_trajectories[a_ids[a_idx]]
                 # Identify indices that are not part of the common indices
                 a_distinct_inds = [
                     x for x in range(len(a_objs)) if x not in cluster_a_common_inds[a_idx]
@@ -363,7 +363,7 @@ def merge_forward_backward_trajectories(
 
             # Process distinct indices for trajectories in cluster_b
             for b_idx in cluster_b_inds:
-                b_boxes, b_objs = b_trajectories[b_ids[b_idx]]
+                b_boxes, b_objs, _ = b_trajectories[b_ids[b_idx]]
                 # Identify indices that are not part of the common indices
                 b_distinct_inds = [
                     x for x in range(len(b_objs)) if x not in cluster_b_common_inds[b_idx]
@@ -398,12 +398,12 @@ def merge_forward_backward_trajectories(
         if visualize_contradictions:
             cluster_a_boxes = []
             for a_idx in cluster_a_inds:
-                a_boxes, _ = a_trajectories[a_ids[a_idx]]
+                a_boxes, _, _ = a_trajectories[a_ids[a_idx]]
                 cluster_a_boxes.append(a_boxes)
             visualize_trajectories(cluster_a_boxes)
             cluster_b_boxes = []
             for b_idx in cluster_b_inds:
-                b_boxes, _ = b_trajectories[b_ids[b_idx]]
+                b_boxes, _, _ = b_trajectories[b_ids[b_idx]]
                 cluster_b_boxes.append(b_boxes[::-1])  # reverse direction
             visualize_trajectories(cluster_b_boxes)
 
@@ -418,7 +418,7 @@ def merge_forward_backward_trajectories(
                 # Temporary storage for the current tracklet.
                 cur_tracklet = []
                 # Extract bounding boxes and objects for the backward trajectory.
-                b_boxes, b_objs = b_trajectories[b_ids[b_idx]]
+                b_boxes, b_objs, _ = b_trajectories[b_ids[b_idx]]
                 b_len = len(b_boxes)  # Length of the backward trajectory.
 
                 # Iterate over overlapping frame indices between the current pair of trajectories.
@@ -652,8 +652,8 @@ def merge_forward_backward_trajectories(
                     track_len,
                     cur_frames,
                 ) = common_tracklets[idx]
-                a_boxes, a_objs = a_trajectories[a_ids[a_idx]]
-                b_boxes, b_objs = b_trajectories[b_ids[b_idx]]
+                a_boxes, a_objs, _ = a_trajectories[a_ids[a_idx]]
+                b_boxes, b_objs, _ = b_trajectories[b_ids[b_idx]]
                 a_first_idx = a_last_idx - track_len + 1
                 b_first_idx = len(b_boxes) - b_last_idx - 1  # reverse back
                 b_last_idx = b_first_idx + track_len - 1

@@ -3,8 +3,8 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
-from nuscenes.eval.common.utils import quaternion_yaw
-from pyquaternion import Quaternion
+# from nuscenes.eval.common.utils import quaternion_yaw
+# from pyquaternion import Quaternion
 
 
 def sigmoid(x):
@@ -153,7 +153,8 @@ class KittiObject3d(KittiObjectTemplate):
             self.occlusion = int(label[2])
             self.alpha = float(label[3])
             self.box2d = np.array(
-                (float(label[4]), float(label[5]), float(label[6]), float(label[7]))
+                (float(label[4]), float(label[5]),
+                 float(label[6]), float(label[7]))
             )
             self.h = float(label[8])
             self.w = float(label[9])
@@ -162,7 +163,8 @@ class KittiObject3d(KittiObjectTemplate):
                 (float(label[11]), float(label[12]), float(label[13])), dtype=np.float32
             )
             self.ry = float(label[14])
-            self.tracking_score = float(label[15]) if label.__len__() == 16 else -1.0
+            self.tracking_score = float(
+                label[15]) if label.__len__() == 16 else -1.0
         if img_hw is not None:
             self.img_hw = img_hw
 
@@ -215,7 +217,8 @@ class KittiTrack3d(KittiObjectTemplate):
             self.occlusion = int(label[4])
             self.alpha = float(label[5])
             self.box2d = np.array(
-                (float(label[6]), float(label[7]), float(label[8]), float(label[9]))
+                (float(label[6]), float(label[7]),
+                 float(label[8]), float(label[9]))
             )
             self.h = float(label[10])
             self.w = float(label[11])
@@ -224,7 +227,8 @@ class KittiTrack3d(KittiObjectTemplate):
                 (float(label[13]), float(label[14]), float(label[15])), dtype=np.float32
             )
             self.ry = float(label[16])
-            self.tracking_score = float(label[17]) if label.__len__() == 18 else -1.0
+            self.tracking_score = float(
+                label[17]) if label.__len__() == 18 else -1.0
 
     def to_obj(self):
         obj = KittiObject3d()
@@ -605,7 +609,8 @@ def visualize_trajectories(
             color=f"C{i}",
             headaxislength=4,
         )
-        ax.scatter(x, y, s=10, marker="o", facecolors="none", edgecolors=f"C{i}")
+        ax.scatter(x, y, s=10, marker="o",
+                   facecolors="none", edgecolors=f"C{i}")
         # ax.plot(-boxes[:, 1], boxes[:, 0], '-o', markersize=3)
     if other_boxes is not None and len(other_boxes) > 0:
         ax.scatter(-other_boxes[:, 1], other_boxes[:, 0], s=2)
@@ -646,7 +651,8 @@ def compute_iou_2d(
     intersection = np.maximum(min_[..., 2] - max_[..., 0], 0) * np.maximum(
         min_[..., 3] - max_[..., 1], 0
     )
-    area1 = (bboxes1[..., 2] - bboxes1[..., 0]) * (bboxes1[..., 3] - bboxes1[..., 1])
+    area1 = (bboxes1[..., 2] - bboxes1[..., 0]) * \
+        (bboxes1[..., 3] - bboxes1[..., 1])
 
     if do_ioa:
         ioas = np.zeros_like(intersection)
@@ -681,13 +687,15 @@ def read_seqmap_file(seqmap_file):
 def get_boxes2d_from_instance_map(instance_map: np.ndarray, ignored_inst_ids=None):
     inst_ids = np.unique(instance_map)[1:]
     if ignored_inst_ids is not None:
-        inst_ids = np.isin(inst_ids, ignored_inst_ids, assume_unique=True, invert=True)
+        inst_ids = np.isin(inst_ids, ignored_inst_ids,
+                           assume_unique=True, invert=True)
     boxes2d = []
     for inst_id in inst_ids:
         row_inds, col_inds = np.nonzero(instance_map == inst_id)
         boxes2d.append(
             np.array(
-                (np.min(col_inds), np.min(row_inds), np.max(col_inds), np.max(row_inds))
+                (np.min(col_inds), np.min(row_inds),
+                 np.max(col_inds), np.max(row_inds))
             )
         )
     return np.stack(boxes2d) if len(boxes2d) > 0 else np.empty((0, 4))
@@ -750,9 +758,11 @@ def read_kitti_trajectories_from_file(
 
     for track in tracks:
         if track.tracking_id not in trajectories:
-            trajectories[track.tracking_id] = [[track.to_lidar_box(calib)], [track]]
+            trajectories[track.tracking_id] = [
+                [track.to_lidar_box(calib)], [track]]
         else:
-            trajectories[track.tracking_id][0].append(track.to_lidar_box(calib))
+            trajectories[track.tracking_id][0].append(
+                track.to_lidar_box(calib))
             trajectories[track.tracking_id][1].append(track)
 
     return trajectories
@@ -805,76 +815,75 @@ def angle_in_range(angle: float):
     return angle
 
 
-def get_quaternion_from_euler(roll, pitch, yaw):
-    """
-    Convert an Euler angle to a quaternion.
+# def get_quaternion_from_euler(roll, pitch, yaw):
+#     """
+#     Convert an Euler angle to a quaternion.
 
-    Input
-        :param roll: The roll (rotation around x-axis) angle in radians.
-        :param pitch: The pitch (rotation around y-axis) angle in radians.
-        :param yaw: The yaw (rotation around z-axis) angle in radians.
+#     Input
+#         :param roll: The roll (rotation around x-axis) angle in radians.
+#         :param pitch: The pitch (rotation around y-axis) angle in radians.
+#         :param yaw: The yaw (rotation around z-axis) angle in radians.
 
-    Output
-        :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-    """
-    qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(
-        roll / 2
-    ) * np.sin(pitch / 2) * np.sin(yaw / 2)
-    qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(
-        roll / 2
-    ) * np.cos(pitch / 2) * np.sin(yaw / 2)
-    qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(
-        roll / 2
-    ) * np.sin(pitch / 2) * np.cos(yaw / 2)
-    qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(
-        roll / 2
-    ) * np.sin(pitch / 2) * np.sin(yaw / 2)
+#     Output
+#         :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
+#     """
+#     qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(
+#         roll / 2
+#     ) * np.sin(pitch / 2) * np.sin(yaw / 2)
+#     qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(
+#         roll / 2
+#     ) * np.cos(pitch / 2) * np.sin(yaw / 2)
+#     qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(
+#         roll / 2
+#     ) * np.sin(pitch / 2) * np.cos(yaw / 2)
+#     qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(
+#         roll / 2
+#     ) * np.sin(pitch / 2) * np.sin(yaw / 2)
 
-    return [qx, qy, qz, qw]
+#     return [qx, qy, qz, qw]
 
+# class NuscenesObject:
+#     def __init__(self, data: dict = None) -> None:
+#         self.data = data
+#         if data:
+#             if "tracking_score" in data:
+#                 self.tracking_score = data["tracking_score"]
+#             elif "detection_score" in data:
+#                 self.tracking_score = data["detection_score"]
+#             else:
+#                 self.tracking_score = 0
+#             self.tracking_id = None
+#             self.sample_id = data["sample_token"]
+#             self.loc = data["translation"]
 
-class NuscenesObject:
-    def __init__(self, data: dict = None) -> None:
-        self.data = data
-        if data:
-            if "tracking_score" in data:
-                self.tracking_score = data["tracking_score"]
-            elif "detection_score" in data:
-                self.tracking_score = data["detection_score"]
-            else:
-                self.tracking_score = 0
-            self.tracking_id = None
-            self.sample_id = data["sample_token"]
-            self.loc = data["translation"]
+#     def serialize(self):
+#         self.data["tracking_id"] = str(self.tracking_id)
+#         if "detection_name" in self.data:
+#             self.data["tracking_name"] = self.data.pop("detection_name")
+#         return self.data
 
-    def serialize(self):
-        self.data["tracking_id"] = str(self.tracking_id)
-        if "detection_name" in self.data:
-            self.data["tracking_name"] = self.data.pop("detection_name")
-        return self.data
+#     def to_box(self):
+#         return np.array(
+#             self.data["translation"]
+#             + self.data["size"]
+#             + [quaternion_yaw(Quaternion(self.data["rotation"]))]
+#         )
 
-    def to_box(self):
-        return np.array(
-            self.data["translation"]
-            + self.data["size"]
-            + [quaternion_yaw(Quaternion(self.data["rotation"]))]
-        )
-
-    def from_box(
-        self, box, sample_token, velocity, tracking_id, tracking_name, tracking_score
-    ):
-        self.tracking_id = tracking_id
-        self.sample_id = sample_token
-        self.tracking_score = tracking_score
-        data = {
-            "sample_token": sample_token,
-            "translation": list(box[:3]),
-            "size": list(box[3:6]),
-            "rotation": get_quaternion_from_euler(0, 0, box[6]),
-            "velocity": velocity,
-            "tracking_id": tracking_id,
-            "tracking_name": tracking_name,
-            "tracking_score": tracking_score,
-        }
-        self.data = data
-        return self
+#     def from_box(
+#         self, box, sample_token, velocity, tracking_id, tracking_name, tracking_score
+#     ):
+#         self.tracking_id = tracking_id
+#         self.sample_id = sample_token
+#         self.tracking_score = tracking_score
+#         data = {
+#             "sample_token": sample_token,
+#             "translation": list(box[:3]),
+#             "size": list(box[3:6]),
+#             "rotation": get_quaternion_from_euler(0, 0, box[6]),
+#             "velocity": velocity,
+#             "tracking_id": tracking_id,
+#             "tracking_name": tracking_name,
+#             "tracking_score": tracking_score,
+#         }
+#         self.data = data
+#         return self

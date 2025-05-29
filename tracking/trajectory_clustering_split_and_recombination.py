@@ -327,11 +327,13 @@ def merge_forward_backward_trajectories(
                     cluster_b_common_inds[b_idx].append(b_common_idx)
 
         if merge_common_only:
+            # based on the metric of get_overlaps_of_trajectories only the common objects from forward and backward
+            # trajectories are merged
             cluster_common_frames = [x.sample_id for x in cluster_common_objs]
             if len(set(cluster_common_frames)) == len(cluster_common_frames):
                 if len(cluster_common_objs) > 0:
                     for x in cluster_common_objs:
-                        x.tracking_id = cur_id
+                        x.tracking_id = cur_id  # Assign a new unique tracking ID to all objects in the cluster
                     merged_trajectories[cur_id] = (
                         cluster_common_boxes,
                         cluster_common_objs,
@@ -413,23 +415,32 @@ def merge_forward_backward_trajectories(
                 # Variables to track the last indices of overlapping frames for both trajectories.
                 last_a_idx = None
                 last_b_idx = None
-                cur_tracklet = []  # Temporary storage for the current tracklet.
-                b_boxes, b_objs = b_trajectories[b_ids[b_idx]]  # Extract bounding boxes and objects for the backward trajectory.
+                # Temporary storage for the current tracklet.
+                cur_tracklet = []
+                # Extract bounding boxes and objects for the backward trajectory.
+                b_boxes, b_objs = b_trajectories[b_ids[b_idx]]
                 b_len = len(b_boxes)  # Length of the backward trajectory.
 
                 # Iterate over overlapping frame indices between the current pair of trajectories.
                 for a_common_idx, b_common_idx in overlap_pair_inds[a_idx][b_idx]:
-                    cur_frame = b_objs[b_common_idx].sample_id  # Get the frame ID of the overlapping object.
-                    b_common_idx = b_len - 1 - b_common_idx  # Reverse indices for backward tracking.
+                    # Get the frame ID of the overlapping object.
+                    cur_frame = b_objs[b_common_idx].sample_id
+                    # Reverse indices for backward tracking.
+                    b_common_idx = b_len - 1 - b_common_idx
 
                     if last_a_idx is None:
                         # If this is the first overlapping frame, initialize a new tracklet.
                         cur_tracklet = [
-                            a_idx,  # Index of the trajectory in a_trajectories.
-                            b_idx,  # Index of the trajectory in b_trajectories.
-                            a_common_idx,  # Last index of overlapping frame in a_objs.
-                            b_common_idx,  # Last index of overlapping frame in b_objs (reversed).
-                            1,  # Length of the tracklet (number of consecutive overlapping frames).
+                            # Index of the trajectory in a_trajectories.
+                            a_idx,
+                            # Index of the trajectory in b_trajectories.
+                            b_idx,
+                            # Last index of overlapping frame in a_objs.
+                            a_common_idx,
+                            # Last index of overlapping frame in b_objs (reversed).
+                            b_common_idx,
+                            # Length of the tracklet (number of consecutive overlapping frames).
+                            1,
                             [cur_frame],  # List of frame IDs for the tracklet.
                         ]
                     else:
@@ -438,9 +449,12 @@ def merge_forward_backward_trajectories(
                             and b_common_idx == last_b_idx - 1
                         ):
                             # If the current indices are consecutive, extend the current tracklet.
-                            cur_tracklet[2] = a_common_idx  # Update the last index for a_objs.
-                            cur_tracklet[4] += 1  # Increment the tracklet length.
-                            cur_tracklet[5].append(cur_frame)  # Add the current frame ID to the tracklet.
+                            # Update the last index for a_objs.
+                            cur_tracklet[2] = a_common_idx
+                            # Increment the tracklet length.
+                            cur_tracklet[4] += 1
+                            # Add the current frame ID to the tracklet.
+                            cur_tracklet[5].append(cur_frame)
                         else:
                             # If the indices are not consecutive, finalize the current tracklet and start a new one.
                             common_tracklets.append(cur_tracklet)
@@ -475,19 +489,29 @@ def merge_forward_backward_trajectories(
             x.sort()
 
         # Convert sorted tracklets into lists of indices for easier access.
-        a_sorted_tracklets = {k: [x[1] for x in v] for k, v in a_sorted_tracklets.items()}
-        b_sorted_tracklets = {k: [x[1] for x in v] for k, v in b_sorted_tracklets.items()}
+        a_sorted_tracklets = {k: [x[1] for x in v]
+                              for k, v in a_sorted_tracklets.items()}
+        b_sorted_tracklets = {k: [x[1] for x in v]
+                              for k, v in b_sorted_tracklets.items()}
 
         # Initialize scores and choices for connecting tracklets.
-        before_scores = [-1] * len(common_tracklets)  # Scores for connections before the current tracklet.
-        after_scores = [-1] * len(common_tracklets)  # Scores for connections after the current tracklet.
-        before_choices = [-1] * len(common_tracklets)  # Choices for connections before the current tracklet.
-        after_choices = [-1] * len(common_tracklets)  # Choices for connections after the current tracklet.
+        # Scores for connections before the current tracklet.
+        before_scores = [-1] * len(common_tracklets)
+        # Scores for connections after the current tracklet.
+        after_scores = [-1] * len(common_tracklets)
+        # Choices for connections before the current tracklet.
+        before_choices = [-1] * len(common_tracklets)
+        # Choices for connections after the current tracklet.
+        after_choices = [-1] * len(common_tracklets)
 
-        before_bad_scores = [-1] * len(common_tracklets)  # Scores for alternative (bad) connections before the current tracklet.
-        after_bad_scores = [-1] * len(common_tracklets)  # Scores for alternative (bad) connections after the current tracklet.
-        before_bad_choices = [-1] * len(common_tracklets)  # Choices for alternative (bad) connections before the current tracklet.
-        after_bad_choices = [-1] * len(common_tracklets)  # Choices for alternative (bad) connections after the current tracklet.
+        # Scores for alternative (bad) connections before the current tracklet.
+        before_bad_scores = [-1] * len(common_tracklets)
+        # Scores for alternative (bad) connections after the current tracklet.
+        after_bad_scores = [-1] * len(common_tracklets)
+        # Choices for alternative (bad) connections before the current tracklet.
+        before_bad_choices = [-1] * len(common_tracklets)
+        # Choices for alternative (bad) connections after the current tracklet.
+        after_bad_choices = [-1] * len(common_tracklets)
 
         # Iterate over each tracklet to calculate scores and determine connections.
         for i, tracklet in enumerate(common_tracklets):

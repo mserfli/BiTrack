@@ -29,11 +29,11 @@ tracker_config = {
     "ang_thresh": 0.5,
     "app_thresh": 0.5,
     "ent_ex_score": 0.3,
-    "offline": False,
+    "offline": False,  # offline mode somehow does not smooth the trajectories
     "app_m": 0.9,
-    "p": 100,
-    "q": 1,
-    "r": 4,
+    "p": 100,  # TDOD still used equally for all dims
+    "q": 1,  # TDOD still used equally for all dims
+    "r": 4,  # TDOD still used equally for all dims
     "ang_vel": True,
     "vel_reinit": True,
     "sim_metric": "NCD",
